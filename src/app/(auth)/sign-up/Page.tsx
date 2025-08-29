@@ -1,16 +1,16 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { Form, useForm } from 'react-hook-form'
+import { useForm } from 'react-hook-form'
 import * as  z from 'zod'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
-import { useDebounceValue, useDebounceCallback } from 'usehooks-ts'
-import { toast, Toaster } from 'sonner'
+import { useDebounceCallback } from 'usehooks-ts'
+import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { signUpSchema } from '@/schemas/signUpSchema'
 import axios, { AxiosError } from 'axios'
 import { ApiResponse } from '@/types/ApiResponse'
-import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Loader2 } from 'lucide-react';
@@ -20,9 +20,9 @@ const Page = () => {
     const [usernameMessage, setUsernameMessage] = useState('')
     const [isCheckingUsername, setIsCheckingUsername] = useState(false)
     const [isSubmitting, setIsSubmitting] = useState(false)
-    const debounced = useDebounceCallback(setUsername, 300)
+    const debouncedSetUsername = useDebounceCallback(setUsername, 300)
     const router = useRouter()
-    //zod implementation
+
     const form = useForm<z.infer<typeof signUpSchema>>({
         resolver: zodResolver(signUpSchema),
         defaultValues: {
@@ -31,7 +31,7 @@ const Page = () => {
             password: '',
         }
     })
-    //username available or not
+
     useEffect(() => {
         const checkUsernameUnique = async () => {
             if (username) {
@@ -49,8 +49,8 @@ const Page = () => {
             }
         }
         checkUsernameUnique()
-    }, [debounced])
-    //data comes from onSubmit and inferred 
+    }, [username]) // Dependency should be the state value itself
+
     const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
         setIsSubmitting(true)
         try {
@@ -58,17 +58,13 @@ const Page = () => {
             toast.success('Success', {
                 description: response.data.message,
             });
-            //extract username and input code
-            router.replace(`/verify/${username}`)
-            setIsSubmitting(false)
-            // router.push('/sign-in')
+            router.replace(`/verify/${data.username}`) // Use data from the form
         } catch (error) {
             const axiosError = error as AxiosError<ApiResponse>
             const errorMessage = axiosError.response?.data.message ?? 'Error signing up';
             toast.error('Error', {
                 description: errorMessage,
             });
-            setIsSubmitting(false)
         } finally {
             setIsSubmitting(false)
         }
@@ -84,78 +80,76 @@ const Page = () => {
                     <p className="mb-4">
                         Sign up to start your anonymous adventure
                     </p>
-                    <div>
-                        <Form {...form}>
-                            <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-                                <FormField
-                                    name="username"
-                                    control={form.control}
-
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Username</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="username" {...field} onChange={(e) => {
-                                                    field.onChange(e)
-                                                    debounced(e.target.value)
-                                                }} />
-
-                                            </FormControl>
-                                            {isCheckingUsername && <Loader2 className='animate-spin' />}
-                                            <p className={`text-sm ${usernameMessage === "Username is taken" ? 'text-red-500' : 'text-green-500'}`}>
-                                                test {usernameMessage}
-                                            </p>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    name="email"
-                                    control={form.control}
-
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Email</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="email" {...field} />
-
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    name="password"
-                                    control={form.control}
-
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Password</FormLabel>
-                                            <FormControl>
-                                                <Input type="password" placeholder="password" {...field} />
-                                            </FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="submit" disabled={isSubmitting}>
-                                    {isSubmitting ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />Please wait...
-                                        </>
-                                    ) : ('Sign Up')}
-                                </Button>
-                            </form>
-                        </Form>
-                        <div className="mt-4 text-center">
-                            <p className="text-sm text-center">
-                                Already have an account?{' '}
-                                <Link href="/sign-in" className="font-medium text-blue-600 hover:underline">
-                                    Sign in
-                                </Link>
-                            </p>
-                        </div>
-                    </div>
+                </div>
+                {/* This <Form> now provides the context correctly */}
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+                        <FormField
+                            name="username"
+                            control={form.control}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Username</FormLabel>
+                                    <FormControl>
+                                        <Input
+                                            placeholder="username"
+                                            {...field}
+                                            onChange={(e) => {
+                                                field.onChange(e)
+                                                debouncedSetUsername(e.target.value)
+                                            }}
+                                        />
+                                    </FormControl>
+                                    {isCheckingUsername && <Loader2 className='animate-spin' />}
+                                    <p className={`text-sm ${usernameMessage.includes("taken") ? 'text-red-500' : 'text-green-500'}`}>
+                                        {usernameMessage}
+                                    </p>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            name="email"
+                            control={form.control}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="email" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <FormField
+                            name="password"
+                            control={form.control}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="password" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        <Button type="submit" disabled={isSubmitting}>
+                            {isSubmitting ? (
+                                <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />Please wait...
+                                </>
+                            ) : ('Sign Up')}
+                        </Button>
+                    </form>
+                </Form>
+                <div className="mt-4 text-center">
+                    <p className="text-sm text-center">
+                        Already have an account?{' '}
+                        <Link href="/sign-in" className="font-medium text-blue-600 hover:underline">
+                            Sign in
+                        </Link>
+                    </p>
                 </div>
             </div>
         </div>
