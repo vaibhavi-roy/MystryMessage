@@ -52,7 +52,7 @@ export async function GET(request: Request) {
                 errors: []
             },
             {
-                status: 400
+                status: 200
             }
         );
     }

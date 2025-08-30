@@ -1,7 +1,7 @@
 'use client'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import * as  z from 'zod'
+import * as  z from 'zod'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { useDebounceCallback } from 'usehooks-ts'
@@ -29,6 +29,7 @@ const Page = () => {
             username: '',
             email: '',
             password: '',
+            confirmPassword: '' // Add to default values
         }
     })
 
@@ -49,7 +50,7 @@ const Page = () => {
             }
         }
         checkUsernameUnique()
-    }, [username]) // Dependency should be the state value itself
+    }, [username])
 
     const onSubmit = async (data: z.infer<typeof signUpSchema>) => {
         setIsSubmitting(true)
@@ -58,7 +59,7 @@ const Page = () => {
             toast.success('Success', {
                 description: response.data.message,
             });
-            router.replace(`/verify/${data.username}`) // Use data from the form
+            router.replace(`/verify/${data.username}`)
         } catch (error) {
             const axiosError = error as AxiosError<ApiResponse>
             const errorMessage = axiosError.response?.data.message ?? 'Error signing up';
@@ -81,9 +82,9 @@ const Page = () => {
                         Sign up to start your anonymous adventure
                     </p>
                 </div>
-                {/* This <Form> now provides the context correctly */}
                 <Form {...form}>
                     <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
+                        {/* Username Field */}
                         <FormField
                             name="username"
                             control={form.control}
@@ -108,6 +109,7 @@ const Page = () => {
                                 </FormItem>
                             )}
                         />
+                        {/* Email Field */}
                         <FormField
                             name="email"
                             control={form.control}
@@ -121,6 +123,7 @@ const Page = () => {
                                 </FormItem>
                             )}
                         />
+                        {/* Password Field */}
                         <FormField
                             name="password"
                             control={form.control}
@@ -134,6 +137,21 @@ const Page = () => {
                                 </FormItem>
                             )}
                         />
+                        {/* START: ADDED CONFIRM PASSWORD FIELD */}
+                        <FormField
+                            name="confirmPassword"
+                            control={form.control}
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Confirm Password</FormLabel>
+                                    <FormControl>
+                                        <Input type="password" placeholder="confirm password" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                        {/* END: ADDED CONFIRM PASSWORD FIELD */}
                         <Button type="submit" disabled={isSubmitting}>
                             {isSubmitting ? (
                                 <>
@@ -156,4 +174,4 @@ const Page = () => {
     )
 }
 
-export default Page
+export default Page;

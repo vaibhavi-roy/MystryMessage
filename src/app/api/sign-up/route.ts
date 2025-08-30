@@ -1,24 +1,20 @@
-//api
-
 import dbConnect from "@/lib/dbConnect";
 import UserModel from "@/model/User";
 import bcrypt from "bcryptjs";
 
 import { sendVerificationEmail } from "@/helpers/sendVerificationEmail";
-import { email, success } from "zod";
 
 export async function POST(request: Request) {
     await dbConnect();
 
     try {
         const { username, email, password } = await request.json();
-        //is user verified and have username
+
         const existingUserVerifiedByUsername = await UserModel.findOne({
             username,
             isVerified: true
         })
         if (existingUserVerifiedByUsername) {
-            // Response.json(): standard Web Fetch API that Next.js exposes in server functions
             return Response.json({
                 success: false,
                 message: "User already exists."
@@ -26,7 +22,9 @@ export async function POST(request: Request) {
         }
 
         const existingUserByEmail = await UserModel.findOne({ email })
-        const verifyCode = Math.floor((1000000 + Math.random()) * 9000000).toString();
+
+        // --- FIX: Correct 6-digit code generation ---
+        const verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
 
         if (existingUserByEmail) {
             if (existingUserByEmail.isVerified) {
@@ -38,16 +36,14 @@ export async function POST(request: Request) {
                 const hashedPassword = await bcrypt.hash(password, 10)
                 existingUserByEmail.password = hashedPassword;
                 existingUserByEmail.verifyCode = verifyCode;
-                existingUserByEmail.verifyCodeExpiry = new Date(Date.now() + 3600000); // Set expiry time to 1 hour from now
+                existingUserByEmail.verifyCodeExpiry = new Date(Date.now() + 3600000); // 1 hour expiry
                 await existingUserByEmail.save();
             }
-
         } else {
             const hashedPassword = await bcrypt.hash(password, 10)
             const expiryDate = new Date();
-            expiryDate.setHours(expiryDate.getHours() + 1); // Set expiry time to 1 hour from now
+            expiryDate.setHours(expiryDate.getHours() + 1);
 
-            //Create new user
             const newUser = new UserModel({
                 username,
                 email,
@@ -61,7 +57,7 @@ export async function POST(request: Request) {
 
             await newUser.save();
         }
-        // Send verification email
+
         const emailResponse = await sendVerificationEmail(
             email,
             username,
